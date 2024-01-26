@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const bcrypt = require('bcrypt');
+const argon2 = require('argon2');
 const { connectDB, User } = require('./User'); // Adjust the path as needed
 
 const app = express();
@@ -41,7 +41,7 @@ const authenticateUser = async (req, res, next) => {
 app.post('/register', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await argon2.hash(password);
 
     const newUser = new User({
       username,
@@ -63,7 +63,7 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
 
-    if (user && (await bcrypt.compare(password, user.password))) {
+    if (user && (await argon2.verify(user.password, password))) {
       const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET || 's3cr3t', {
         expiresIn: '1h',
       });
@@ -77,7 +77,6 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 });
-
 app.post('/addtodo', authenticateUser, async (req, res) => {
   try {
     const { task, completed } = req.body;
